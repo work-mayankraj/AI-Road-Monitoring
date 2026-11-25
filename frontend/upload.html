@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Upload Video or Photo - RoadGuard AI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' },
+            accent: { 500: '#f59e0b', 600: '#d97706' }
+          }
+        }
+      }
+    }
+  </script>
+  <script src="app.js"></script>
+  <script>RG.requireRole('user');</script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+  <nav class="bg-white shadow-sm sticky top-0 z-50 border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between h-16 items-center">
+        <a href="index.html" class="flex items-center gap-2">
+          <div class="w-9 h-9 bg-primary-600 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+          </div>
+          <span class="font-bold text-xl text-primary-800">RoadGuard <span class="text-accent-500">AI</span></span>
+        </a>
+        <div class="hidden md:flex items-center gap-6">
+          <a href="dashboard.html" class="text-slate-600 hover:text-primary-600">Dashboard</a>
+          <a href="upload.html" class="text-primary-700 font-medium">Upload</a>
+          <a href="map.html" class="text-slate-600 hover:text-primary-600">Map</a>
+          <a href="complaint.html" class="text-slate-600 hover:text-primary-600">Complaints</a>
+        </div>
+        <a href="dashboard.html" class="text-sm text-slate-500 hover:text-slate-700">← Back</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mb-8">
+      <h1 class="text-2xl font-bold text-slate-900">Upload Road Video or Photo</h1>
+      <p class="text-slate-600 mt-1">Upload a road video (with GPS track) or a photo (with its location) for AI pothole detection</p>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8">
+      <form id="uploadForm" onsubmit="handleUpload(event)" class="space-y-6">
+        <!-- Session name -->
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1.5">Session name</label>
+          <input type="text" id="sessionName" required placeholder="e.g. MG Road Drive - Nov 17"
+            class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none" />
+        </div>
+
+        <!-- Media type -->
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1.5">What are you uploading?</label>
+          <div class="grid grid-cols-2 gap-1 bg-slate-100 rounded-xl p-1">
+            <button type="button" id="mt-video" onclick="setMedia('video')" class="py-2 rounded-lg text-sm font-semibold transition">🎥 Video</button>
+            <button type="button" id="mt-photo" onclick="setMedia('photo')" class="py-2 rounded-lg text-sm font-semibold transition">📷 Photo (JPEG)</button>
+          </div>
+        </div>
+
+        <!-- Media file -->
+        <div>
+          <label id="mediaTitle" class="block text-sm font-medium text-slate-700 mb-1.5">Road video</label>
+          <div class="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-primary-400 transition cursor-pointer" onclick="document.getElementById('mediaFile').click()">
+            <input type="file" id="mediaFile" accept="video/*" class="hidden" onchange="showFileName('media')" />
+            <svg class="w-12 h-12 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <p class="text-slate-600 font-medium" id="mediaLabel">Click to select video</p>
+            <p class="text-sm text-slate-400 mt-1" id="mediaHint">MP4, MOV, AVI • Max 500 MB recommended</p>
+          </div>
+          <img id="photoPreview" class="hidden mt-3 max-h-56 rounded-lg border border-slate-200 mx-auto" alt="Photo preview" />
+        </div>
+
+        <!-- GPS (video) -->
+        <div id="gpsSection">
+          <label class="block text-sm font-medium text-slate-700 mb-1.5">GPS track (GPX or CSV)</label>
+          <div class="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-primary-400 transition cursor-pointer" onclick="document.getElementById('gpsFile').click()">
+            <input type="file" id="gpsFile" accept=".gpx,.csv,.txt" class="hidden" onchange="showFileName('gps')" />
+            <svg class="w-12 h-12 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+            <p class="text-slate-600 font-medium" id="gpsLabel">Click to select GPS file</p>
+            <p class="text-sm text-slate-400 mt-1">GPX or CSV with timestamp, lat, lon columns</p>
+          </div>
+        </div>
+
+        <!-- Location (photo) -->
+        <div id="locSection" class="hidden">
+          <label class="block text-sm font-medium text-slate-700 mb-1.5">Photo location</label>
+          <div class="grid grid-cols-2 gap-3">
+            <input type="number" step="any" id="lat" placeholder="Latitude e.g. 12.9716" class="px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none" />
+            <input type="number" step="any" id="lng" placeholder="Longitude e.g. 77.5946" class="px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none" />
+          </div>
+          <button type="button" onclick="useMyLocation()" class="mt-2 text-sm text-primary-600 hover:text-primary-700 font-medium">📍 Use my current location</button>
+        </div>
+
+        <!-- Info box -->
+        <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-800">
+          <strong>Important:</strong> <span id="infoText"></span>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-3 pt-2">
+          <button type="submit" class="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+            Start Processing
+          </button>
+          <a href="dashboard.html" class="px-6 py-3 border border-slate-300 rounded-lg text-center font-medium hover:bg-slate-50 transition">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <script>
+    let media = 'video';
+    function setMedia(m) {
+      media = m;
+      const on = 'bg-white text-primary-700 shadow-sm', off = 'text-slate-500 hover:text-slate-700';
+      document.getElementById('mt-video').className = 'py-2 rounded-lg text-sm font-semibold transition ' + (m === 'video' ? on : off);
+      document.getElementById('mt-photo').className = 'py-2 rounded-lg text-sm font-semibold transition ' + (m === 'photo' ? on : off);
+      const f = document.getElementById('mediaFile');
+      f.value = ''; f.accept = m === 'video' ? 'video/*' : '.jpg,.jpeg,image/jpeg';
+      document.getElementById('mediaTitle').textContent = m === 'video' ? 'Road video' : 'Road photo (JPEG)';
+      document.getElementById('mediaLabel').textContent = m === 'video' ? 'Click to select video' : 'Click to select JPEG photo';
+      document.getElementById('mediaLabel').classList.remove('text-primary-600');
+      document.getElementById('mediaHint').textContent = m === 'video' ? 'MP4, MOV, AVI • Max 500 MB recommended' : 'JPEG only (.jpg / .jpeg) • Clear shot of the road surface';
+      document.getElementById('photoPreview').classList.add('hidden');
+      document.getElementById('gpsSection').classList.toggle('hidden', m === 'photo');
+      document.getElementById('locSection').classList.toggle('hidden', m === 'video');
+      document.getElementById('infoText').textContent = m === 'video'
+        ? 'Record the GPS track at the same time as the video. Locations are approximate — we match frame timestamps to the nearest GPS sample. Videos without GPS will not show map markers.'
+        : 'Enter the place where the photo was taken (or use your current location). A photo without a location will not show a map marker.';
+    }
+    function showFileName(type) {
+      const input = document.getElementById(type + 'File');
+      const label = document.getElementById(type + 'Label');
+      if (input.files.length > 0) {
+        label.textContent = input.files[0].name;
+        label.classList.add('text-primary-600');
+        if (type === 'media' && media === 'photo') {
+          const img = document.getElementById('photoPreview');
+          img.src = URL.createObjectURL(input.files[0]); img.classList.remove('hidden');
+        }
+      }
+    }
+    function useMyLocation() {
+      if (!navigator.geolocation) { alert('Geolocation is not supported by this browser.'); return; }
+      navigator.geolocation.getCurrentPosition(p => {
+        document.getElementById('lat').value = p.coords.latitude.toFixed(6);
+        document.getElementById('lng').value = p.coords.longitude.toFixed(6);
+      }, () => alert('Could not get your location. Please type the coordinates.'));
+    }
+    const isJpeg = f => f.type === 'image/jpeg' || /\.jpe?g$/i.test(f.name);
+
+    function drawScaled(src, w, h, max) {
+      const k = Math.min(1, max / w), c = document.createElement('canvas');
+      c.width = Math.round(w * k); c.height = Math.round(h * k);
+      c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+      return c.toDataURL('image/jpeg', 0.6);
+    }
+    // One preview picture from a photo
+    function photoFrames(file) {
+      return new Promise(res => {
+        const url = URL.createObjectURL(file), img = new Image();
+        img.onload = () => { const out = [{ img: drawScaled(img, img.naturalWidth, img.naturalHeight, 800), t: null }]; URL.revokeObjectURL(url); res(out); };
+        img.onerror = () => { URL.revokeObjectURL(url); res([]); };
+        img.src = url;
+      });
+    }
+    // Six pictures spread across the video, so detections show real road content
+    function videoFrames(file) {
+      return new Promise(res => {
+        const v = document.createElement('video'), url = URL.createObjectURL(file), out = [];
+        v.muted = true; v.preload = 'auto'; v.playsInline = true; v.src = url;
+        let finished = false;
+        const done = () => { if (finished) return; finished = true; clearTimeout(timer); URL.revokeObjectURL(url); res(out); };
+        const timer = setTimeout(done, 10000);
+        v.onerror = done;
+        v.onloadedmetadata = async () => {
+          if (!isFinite(v.duration) || v.duration <= 0) return done();
+          for (let i = 0; i < 6 && !finished; i++) {
+            const t = v.duration * (i + 0.5) / 6;
+            await new Promise(r => { v.onseeked = r; v.currentTime = t; });
+            out.push({ img: drawScaled(v, v.videoWidth, v.videoHeight, 640), t });
+          }
+          done();
+        };
+      });
+    }
+
+    // Read GPX or CSV (timestamp, lat, lon) into a list of {lat, lng}
+    function parseTrack(text, name) {
+      const pts = [], ok = (la, lo) => isFinite(la) && isFinite(lo) && Math.abs(la) <= 90 && Math.abs(lo) <= 180;
+      if (/\.gpx$/i.test(name) || /<gpx/i.test(text)) {
+        (text.match(/<(?:trkpt|rtept|wpt)\b[^>]*>/gi) || []).forEach(tag => {
+          const la = parseFloat((tag.match(/lat\s*=\s*"([^"]+)"/i) || [])[1]), lo = parseFloat((tag.match(/lon\s*=\s*"([^"]+)"/i) || [])[1]);
+          if (ok(la, lo)) pts.push({ lat: la, lng: lo });
+        });
+        return pts;
+      }
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      if (!lines.length) return pts;
+      const sep = lines[0].indexOf(';') >= 0 ? ';' : ',';
+      const head = lines[0].split(sep).map(h => h.trim().toLowerCase());
+      let li = head.findIndex(h => /^lat/.test(h)), oi = head.findIndex(h => /^(lon|lng|long)/.test(h));
+      if (li < 0 || oi < 0) { li = head.length >= 3 ? 1 : 0; oi = li + 1; }
+      const start = isNaN(parseFloat(head[li])) ? 1 : 0;
+      for (let i = start; i < lines.length; i++) {
+        const c = lines[i].split(sep), la = parseFloat(c[li]), lo = parseFloat(c[oi]);
+        if (ok(la, lo)) pts.push({ lat: la, lng: lo });
+      }
+      return pts;
+    }
+
+    async function handleUpload(e) {
+      e.preventDefault();
+      const file = document.getElementById('mediaFile').files[0];
+      if (!file) { alert('Please select a ' + (media === 'photo' ? 'JPEG photo' : 'video') + ' file'); return; }
+      if (media === 'photo' && !isJpeg(file)) { alert('Only JPEG photos (.jpg / .jpeg) are supported'); return; }
+      if (media === 'video' && !file.type.startsWith('video/')) { alert('Please choose a video file'); return; }
+      const lat = document.getElementById('lat').value, lng = document.getElementById('lng').value;
+      if (media === 'photo' && ((lat === '') !== (lng === ''))) { alert('Enter both latitude and longitude'); return; }
+      const gpsFile = media === 'video' ? document.getElementById('gpsFile').files[0] : null;
+      let track = [];
+      if (gpsFile) {
+        track = parseTrack(await gpsFile.text(), gpsFile.name);
+        if (!track.length && !confirm('Could not read any GPS points from "' + gpsFile.name + '". Continue without location?')) return;
+      }
+      const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true; btn.textContent = 'Preparing frames...';
+      const frames = media === 'photo' ? await photoFrames(file) : await videoFrames(file);
+      const session = await RG.createSession({
+        name: document.getElementById('sessionName').value.trim(), mediaType: media, fileName: file.name, frames, track,
+        gps: gpsFile ? gpsFile.name : null, lat: lat === '' ? null : +lat, lng: lng === '' ? null : +lng
+      });
+      if (!session) { alert(RG.lastError || 'Could not save this upload.'); btn.disabled = false; btn.textContent = 'Start Processing'; return; }
+      window.location.href = 'processing.html?session=' + session.id;
+    }
+    setMedia('video');
+  </script>
+</body>
+</html>

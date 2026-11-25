@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pothole Details - RoadGuard AI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' },
+            accent: { 500: '#f59e0b', 600: '#d97706' },
+            success: { 500: '#10b981', 600: '#059669' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>#miniMap { height: 220px; border-radius: 12px; }</style>
+  <script src="app.js"></script>
+  <script>RG.requireRole('user');</script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+  <nav class="bg-white shadow-sm sticky top-0 z-50 border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between h-16 items-center">
+        <a href="index.html" class="flex items-center gap-2">
+          <div class="w-9 h-9 bg-primary-600 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+          </div>
+          <span class="font-bold text-xl text-primary-800">RoadGuard <span class="text-accent-500">AI</span></span>
+        </a>
+        <a href="processing.html" class="text-sm text-slate-500 hover:text-slate-700">← Back to detections</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mb-6">
+      <div class="flex items-center gap-3 mb-1">
+        <h1 id="dTitle" class="text-2xl font-bold text-slate-900">Pothole #1</h1>
+        <span id="dStatus" class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Confirmed</span>
+        <span id="dSevBadge" class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">High Severity</span>
+      </div>
+      <p id="dSub" class="text-slate-600"></p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6">
+      <!-- Image -->
+      <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div id="frameBox" class="aspect-video bg-slate-200 relative overflow-hidden"></div>
+        <div class="p-4 border-t border-slate-100"><a id="dlBtn" href="#" download="pothole-frame.jpg" class="block text-center py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 font-medium">Download Image</a></div>
+      </div>
+
+      <!-- Details -->
+      <div class="space-y-4">
+        <div class="bg-white rounded-xl border border-slate-200 p-5">
+          <h2 class="font-semibold mb-4">Detection Info</h2>
+          <dl class="space-y-3 text-sm">
+            <div class="flex justify-between">
+              <dt class="text-slate-500">Confidence</dt>
+              <dd id="dConf" class="font-medium">92%</dd>
+            </div>
+            <div class="flex justify-between">
+              <dt class="text-slate-500">Timestamp</dt>
+              <dd id="dTime" class="font-medium">00:41 / 03:12</dd>
+            </div>
+            <div class="flex justify-between">
+              <dt class="text-slate-500">Latitude</dt>
+              <dd id="dLat" class="font-medium">12.9716° N</dd>
+            </div>
+            <div class="flex justify-between">
+              <dt class="text-slate-500">Longitude</dt>
+              <dd id="dLng" class="font-medium">77.5946° E</dd>
+            </div>
+            <div class="flex justify-between">
+              <dt class="text-slate-500">Severity (est.)</dt>
+              <dd id="dSev" class="font-medium text-red-600">High</dd>
+            </div>
+            <div class="flex justify-between">
+              <dt class="text-slate-500">Verification</dt>
+              <dd id="dVer" class="font-medium text-green-600">User confirmed</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 p-5">
+          <h2 class="font-semibold mb-3">Location</h2>
+          <div id="miniMap"></div>
+          <p class="text-xs text-slate-500 mt-2">Approximate location based on the GPS track or the location you entered. Accuracy depends on GPS quality.</p>
+        </div>
+
+        <div class="flex gap-3">
+          <button id="cBtn" onclick="makeComplaint()" class="flex-1 bg-primary-600 hover:bg-primary-700 text-white text-center py-2.5 rounded-lg font-medium transition">Generate Complaint</button>
+          <button id="rBtn" onclick="rejectIt()" class="px-4 py-2.5 border border-slate-300 rounded-lg hover:bg-slate-50 font-medium">Reject</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    let det = null;
+    let marker = null, miniMap = null;
+    RG.ready.then(() => {
+      det = RG.detection(+params.get('id'));
+      if (!det || det.owner !== RG.currentUser().email) {
+        document.querySelector('main').innerHTML = '<div class="bg-white rounded-xl border border-dashed border-slate-300 p-12 text-center"><p class="text-slate-600 mb-4">This detection was not found.</p><a href="processing.html" class="text-primary-600 font-medium">← Back to detections</a></div>';
+      } else {
+        if (window.L) {
+          miniMap = L.map('miniMap', { scrollWheelZoom: false }).setView([20.5937, 78.9629], 4);
+          RG.addBaseMaps(miniMap, false);
+        }
+        paint();
+      }
+    });
+
+    function paint() {
+      det = RG.detection(det.id);
+      const s = RG.session(det.sessionId);
+      const sev = det.conf >= 90 ? 'High' : det.conf >= 75 ? 'Medium' : 'Low';
+      const sevCls = { High: 'bg-red-100 text-red-700', Medium: 'bg-yellow-100 text-yellow-700', Low: 'bg-slate-100 text-slate-600' }[sev];
+      document.title = 'Pothole #' + det.n + ' - RoadGuard AI';
+      document.getElementById('dTitle').textContent = 'Pothole #' + det.n;
+      document.getElementById('dSub').textContent = 'Session: ' + (s ? s.name + ' • ' + RG.fmtDate(s.date) : '—') + ' • ' + RG.frameLabel(det);
+      document.getElementById('dSevBadge').className = 'inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ' + sevCls;
+      document.getElementById('dSevBadge').textContent = sev + ' Severity';
+      document.getElementById('dSev').className = 'font-medium';
+      document.getElementById('dSev').textContent = sev;
+      document.getElementById('frameBox').innerHTML = RG.frameHtml(det, true) + '<div class="absolute top-3 right-3 bg-black/70 text-white text-sm px-2.5 py-1 rounded-lg font-medium">' + det.conf + '% confidence</div>';
+      const f = RG.frameOf(det); const dl = document.getElementById('dlBtn');
+      dl.classList.toggle('hidden', !f); if (f) dl.href = f.img + (f.img.indexOf('?') < 0 ? '?download=1' : '');
+      document.getElementById('dTime').textContent = RG.frameTime(det);
+      document.getElementById('dConf').textContent = det.conf + '%';
+      document.getElementById('dLat').textContent = det.lat == null ? 'Not available' : Math.abs(det.lat).toFixed(4) + '° ' + (det.lat >= 0 ? 'N' : 'S');
+      document.getElementById('dLng').textContent = det.lng == null ? 'Not available' : Math.abs(det.lng).toFixed(4) + '° ' + (det.lng >= 0 ? 'E' : 'W');
+      if (miniMap && det.lat != null) {
+        miniMap.setView([det.lat, det.lng], 16);
+        if (marker) marker.setLatLng([det.lat, det.lng]); else marker = L.marker([det.lat, det.lng]).addTo(miniMap);
+      }
+      const st = { confirmed: ['bg-green-100 text-green-700', 'Confirmed', 'User confirmed'], pending: ['bg-yellow-100 text-yellow-700', 'Pending', 'Awaiting review'], rejected: ['bg-red-100 text-red-700', 'Rejected', 'User rejected'] }[det.status];
+      document.getElementById('dStatus').className = 'inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ' + st[0];
+      document.getElementById('dStatus').textContent = st[1];
+      document.getElementById('dVer').textContent = st[2];
+      const cb = document.getElementById('cBtn'), rb = document.getElementById('rBtn');
+      const c = RG.complaintForDetection(det.id);
+      if (c) { cb.textContent = 'View Complaint ' + c.id; cb.onclick = () => location.href = 'complaint.html'; }
+      else if (det.status !== 'confirmed') { cb.textContent = 'Confirm this pothole'; cb.onclick = () => { RG.setDetectionStatus(det.id, 'confirmed').then(paint); }; }
+      else { cb.textContent = 'Create Complaint'; cb.onclick = () => RG.openComplaintModal({ preselect: [det.id], onSaved: paint }); }
+      rb.classList.toggle('hidden', det.status === 'rejected' || !!c);
+    }
+    function rejectIt() { RG.setDetectionStatus(det.id, 'rejected').then(paint); }
+  </script>
+</body>
+</html>

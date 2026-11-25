@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard - RoadGuard AI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' },
+            accent: { 500: '#f59e0b', 600: '#d97706' },
+            success: { 500: '#10b981', 600: '#059669' },
+            danger: { 500: '#ef4444' }
+          }
+        }
+      }
+    }
+  </script>
+  <script src="app.js"></script>
+  <script>RG.requireRole('admin');</script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+  <nav class="bg-slate-900 text-white sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between h-16 items-center">
+        <a href="index.html" class="flex items-center gap-2">
+          <div class="w-9 h-9 bg-primary-500 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+          </div>
+          <span class="font-bold text-xl">RoadGuard <span class="text-accent-500">AI</span> <span class="text-xs bg-primary-500 px-2 py-0.5 rounded ml-1">Admin</span></span>
+        </a>
+        <div class="flex items-center gap-4">
+          <span class="text-sm text-slate-300 hidden sm:inline">Admin User</span>
+          <button onclick="logout()" class="text-sm text-slate-300 hover:text-white px-3 py-1.5 rounded-lg hover:bg-slate-800">Logout</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mb-8">
+      <h1 class="text-2xl font-bold text-slate-900">Admin Dashboard</h1>
+      <p class="text-slate-600">Review reports, manage complaints, and update status</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div class="bg-white rounded-xl border border-slate-200 p-5">
+        <div class="text-sm text-slate-500 mb-1">Total Complaints</div>
+        <div id="aTotal" class="text-2xl font-bold">0</div>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 p-5">
+        <div class="text-sm text-slate-500 mb-1">Pending Review</div>
+        <div id="aPend" class="text-2xl font-bold text-accent-600">0</div>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 p-5">
+        <div class="text-sm text-slate-500 mb-1">In Progress</div>
+        <div id="aProg" class="text-2xl font-bold text-purple-600">0</div>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 p-5">
+        <div class="text-sm text-slate-500 mb-1">Resolved</div>
+        <div id="aRes" class="text-2xl font-bold text-success-600">0</div>
+        <div id="aRate" class="text-xs text-slate-500 mt-1">—</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex gap-1 border-b border-slate-200 mb-6">
+      <button onclick="showTab('complaints')" id="tab-complaints" class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-primary-600 text-primary-700">Complaints</button>
+      <button onclick="showTab('detections')" id="tab-detections" class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700">User Detections</button>
+      <button onclick="showTab('users')" id="tab-users" class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700">Users</button>
+    </div>
+
+    <!-- Complaints Tab -->
+    <div id="panel-complaints" class="tab-panel">
+      <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+          <h2 class="font-semibold">All Complaints</h2>
+          <div class="flex gap-2">
+            <select id="statusFilter" onchange="renderAdmin()" class="text-sm border border-slate-300 rounded-lg px-3 py-1.5 outline-none">
+              <option value="all">All statuses</option>
+              <option value="pending">Pending</option>
+              <option value="in_progress">In Progress</option>
+              <option value="resolved">Resolved</option>
+            </select>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-slate-600">
+              <tr>
+                <th class="text-left px-6 py-3 font-medium">ID</th>
+                <th class="text-left px-6 py-3 font-medium">User</th>
+                <th class="text-left px-6 py-3 font-medium">Location</th>
+                <th class="text-left px-6 py-3 font-medium">Status</th>
+                <th class="text-left px-6 py-3 font-medium">Created</th>
+                <th class="text-left px-6 py-3 font-medium">Update status</th>
+                <th class="text-left px-6 py-3 font-medium"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100" id="adminComplaints"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detections Tab -->
+    <div id="panel-detections" class="tab-panel hidden">
+      <div class="bg-white rounded-xl border border-slate-200 p-6">
+        <h2 class="font-semibold mb-4">User-Confirmed Detections</h2>
+        <div id="adminDets" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      </div>
+    </div>
+
+    <!-- Users Tab -->
+    <div id="panel-users" class="tab-panel hidden">
+      <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 text-slate-600">
+            <tr>
+              <th class="text-left px-6 py-3 font-medium">Name</th>
+              <th class="text-left px-6 py-3 font-medium">Email</th>
+              <th class="text-left px-6 py-3 font-medium">Role</th>
+              <th class="text-left px-6 py-3 font-medium">Sessions</th>
+              <th class="text-left px-6 py-3 font-medium">Complaints</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100" id="adminUsers"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    function showTab(name) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('border-primary-600', 'text-primary-700');
+        b.classList.add('border-transparent', 'text-slate-500');
+      });
+      document.getElementById('panel-' + name).classList.remove('hidden');
+      const btn = document.getElementById('tab-' + name);
+      btn.classList.add('border-primary-600', 'text-primary-700');
+      btn.classList.remove('border-transparent', 'text-slate-500');
+    }
+
+    function locText(c) { return RG.coord(c.lat, c.lng); }
+
+    function renderAdmin() {
+      const all = RG.allComplaints();
+      const n = st => all.filter(c => c.status === st).length;
+      document.getElementById('aTotal').textContent = all.length;
+      document.getElementById('aPend').textContent = n('pending');
+      document.getElementById('aProg').textContent = n('in_progress');
+      document.getElementById('aRes').textContent = n('resolved');
+      document.getElementById('aRate').textContent = all.length ? Math.round(n('resolved') / all.length * 100) + '% resolution rate' : 'No complaints yet';
+
+      const f = document.getElementById('statusFilter').value;
+      const rows = all.filter(c => f === 'all' || c.status === f);
+      document.getElementById('adminComplaints').innerHTML = rows.length ? rows.map(c => {
+        const st = RG.STATUS[c.status];
+        const opt = (v, l) => `<option value="${v}" ${c.status === v ? 'selected' : ''}>${l}</option>`;
+        return `<tr class="hover:bg-slate-50">
+          <td class="px-6 py-4 font-medium">${RG.esc(c.id)}</td>
+          <td class="px-6 py-4">${RG.esc(c.userName)}</td>
+          <td class="px-6 py-4 text-slate-600">${locText(c)}</td>
+          <td class="px-6 py-4"><span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${st.cls}">${st.label}</span></td>
+          <td class="px-6 py-4 text-slate-600">${RG.fmtDate(c.createdAt)}</td>
+          <td class="px-6 py-4"><select onchange="updateStatus('${c.id}', this.value)" class="text-xs border border-slate-300 rounded px-2 py-1 outline-none">
+            ${opt('pending', 'Pending')}${opt('in_progress', 'In Progress')}${opt('resolved', 'Resolved')}</select></td>
+          <td class="px-6 py-4"><button onclick="RG.showComplaint('${c.id}', { admin: true })" class="text-primary-600 hover:text-primary-700 font-medium text-sm">View</button></td>
+        </tr>`;
+      }).join('') : '<tr><td colspan="7" class="px-6 py-10 text-center text-slate-500">' + (all.length ? 'No complaints match this filter.' : 'No complaints have been filed yet.') + '</td></tr>';
+
+      const dets = RG.allDetections().filter(d => d.status === 'confirmed');
+      document.getElementById('adminDets').innerHTML = dets.length ? dets.map(d => {
+        const c = RG.complaintForDetection(d.id), u = RG.allUsers().find(x => x.email === d.owner);
+        return `<div class="border border-slate-200 rounded-xl p-4">
+          <div class="aspect-video bg-slate-100 rounded-lg mb-3 relative overflow-hidden">${RG.frameHtml(d)}</div>
+          <div class="text-sm font-medium">${RG.esc(RG.frameLabel(d))} • ${d.conf}%</div>
+          <div class="text-xs text-slate-500 mt-1">Confirmed by ${RG.esc(u ? u.name : d.owner)} • ${RG.coord(d.lat, d.lng)}</div>
+          <div class="text-xs mt-2 ${c ? 'text-green-700' : 'text-slate-400'}">${c ? 'Complaint ' + c.id : 'No complaint yet'}</div>
+        </div>`;
+      }).join('') : '<p class="text-sm text-slate-500 col-span-full">No confirmed detections yet.</p>';
+
+      const sessions = RG.allSessions();
+      document.getElementById('adminUsers').innerHTML = RG.allUsers().map(u => `<tr class="hover:bg-slate-50">
+        <td class="px-6 py-4 font-medium">${RG.esc(u.name)}</td>
+        <td class="px-6 py-4">${RG.esc(u.email)}</td>
+        <td class="px-6 py-4"><span class="text-xs px-2 py-0.5 rounded-full ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}">${u.role === 'admin' ? 'Admin' : 'User'}</span></td>
+        <td class="px-6 py-4">${u.role === 'admin' ? '—' : sessions.filter(s => s.owner === u.email).length}</td>
+        <td class="px-6 py-4">${u.role === 'admin' ? '—' : all.filter(c => c.email === u.email).length}</td>
+      </tr>`).join('');
+    }
+
+    async function updateStatus(id, val) {
+      const ok = await RG.updateComplaint(id, { status: val });
+      renderAdmin();
+      if (ok) RG.toast('Complaint ' + id + ' set to ' + RG.STATUS[val].label);
+    }
+
+    function logout() { RG.logout(); }
+    RG.ready.then(renderAdmin);
+    const me = RG.currentUser();
+    if (me) document.querySelector('nav span.hidden.sm\\:inline').textContent = me.name;
+  </script>
+</body>
+</html>

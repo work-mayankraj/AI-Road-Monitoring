@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Processing Results - RoadGuard AI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' },
+            accent: { 500: '#f59e0b', 600: '#d97706' },
+            success: { 500: '#10b981', 600: '#059669' },
+            danger: { 500: '#ef4444', 600: '#dc2626' }
+          }
+        }
+      }
+    }
+  </script>
+  <script src="app.js"></script>
+  <script>RG.requireRole('user');</script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+  <nav class="bg-white shadow-sm sticky top-0 z-50 border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between h-16 items-center">
+        <a href="index.html" class="flex items-center gap-2">
+          <div class="w-9 h-9 bg-primary-600 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+          </div>
+          <span class="font-bold text-xl text-primary-800">RoadGuard <span class="text-accent-500">AI</span></span>
+        </a>
+        <div class="hidden md:flex items-center gap-6">
+          <a href="dashboard.html" class="text-slate-600 hover:text-primary-600">Dashboard</a>
+          <a href="upload.html" class="text-slate-600 hover:text-primary-600">Upload</a>
+          <a href="map.html" class="text-slate-600 hover:text-primary-600">Map</a>
+          <a href="complaint.html" class="text-slate-600 hover:text-primary-600">Complaints</a>
+        </div>
+        <a href="dashboard.html" class="text-sm text-slate-500 hover:text-slate-700">← Dashboard</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Empty state -->
+    <div id="emptyState" class="hidden bg-white rounded-xl border border-dashed border-slate-300 p-12 text-center">
+      <div class="text-4xl mb-3">📂</div>
+      <h1 class="text-xl font-bold text-slate-900 mb-1">No uploads yet</h1>
+      <p class="text-slate-600 mb-5">Upload a road video or a JPEG photo to see detected potholes here.</p>
+      <a href="upload.html" class="inline-flex bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-lg font-medium">Upload video / photo</a>
+    </div>
+
+    <div id="content" class="hidden">
+      <!-- Header -->
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div>
+          <div class="flex items-center gap-3 mb-1 flex-wrap">
+            <h1 id="sessName" class="text-2xl font-bold text-slate-900"></h1>
+            <span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Completed</span>
+            <select id="sessSwitch" onchange="switchSession(this.value)" class="hidden text-sm border border-slate-300 rounded-lg px-2 py-1 outline-none"></select>
+          </div>
+          <p id="sessMeta" class="text-slate-600"></p>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <a href="map.html" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 font-medium text-sm">View on Map</a>
+          <button onclick="confirmAll()" class="inline-flex items-center gap-2 px-4 py-2 border border-primary-600 text-primary-700 hover:bg-primary-50 rounded-lg font-medium text-sm">Confirm All Pending</button>
+          <button id="complaintBtn" onclick="startComplaint()" class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium text-sm">Create Complaint</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-xl border border-slate-200 p-4 text-center"><div id="sTotal" class="text-2xl font-bold text-slate-900">0</div><div class="text-sm text-slate-500">Total Detections</div></div>
+        <div class="bg-white rounded-xl border border-slate-200 p-4 text-center"><div id="sConf" class="text-2xl font-bold text-success-600">0</div><div class="text-sm text-slate-500">Confirmed</div></div>
+        <div class="bg-white rounded-xl border border-slate-200 p-4 text-center"><div id="sPend" class="text-2xl font-bold text-slate-400">0</div><div class="text-sm text-slate-500">Pending Review</div></div>
+        <div class="bg-white rounded-xl border border-slate-200 p-4 text-center"><div id="sRej" class="text-2xl font-bold text-danger-500">0</div><div class="text-sm text-slate-500">Rejected</div></div>
+      </div>
+
+      <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 text-sm text-blue-800 mb-4">
+        <b>How to file a complaint:</b> click a picture to enlarge it, then <b>Confirm</b> or <b>Reject</b>. Tick <b>Select</b> on the confirmed frames you want, then press the single <b>Create Complaint</b> button at the top.
+        <span class="block text-xs text-blue-700 mt-1">Demo: the AI model is not connected yet, so boxes and confidence values are samples.</span>
+      </div>
+
+      <!-- Detections grid -->
+      <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+          <h2 class="font-semibold">Detected Potholes</h2>
+          <div class="flex items-center gap-2">
+            <button onclick="selectAllConfirmed()" class="text-sm text-primary-600 hover:text-primary-700 font-medium mr-2">Select all confirmed</button>
+            <button onclick="filterDetections('all')" class="filter-btn px-3 py-1 text-sm rounded-lg bg-primary-100 text-primary-700 font-medium" data-filter="all">All</button>
+            <button onclick="filterDetections('pending')" class="filter-btn px-3 py-1 text-sm rounded-lg text-slate-600 hover:bg-slate-100" data-filter="pending">Pending</button>
+            <button onclick="filterDetections('confirmed')" class="filter-btn px-3 py-1 text-sm rounded-lg text-slate-600 hover:bg-slate-100" data-filter="confirmed">Confirmed</button>
+            <button onclick="filterDetections('rejected')" class="filter-btn px-3 py-1 text-sm rounded-lg text-slate-600 hover:bg-slate-100" data-filter="rejected">Rejected</button>
+          </div>
+        </div>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6" id="detectionsGrid"></div>
+      </div>
+    </div>
+  </main>
+
+  <div id="lightbox" class="hidden fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4" onclick="if(event.target===this)closeFrame()">
+    <div class="bg-white rounded-2xl w-full max-w-3xl overflow-hidden">
+      <div class="aspect-video bg-slate-200 relative overflow-hidden" id="lbFrame"></div>
+      <div class="p-4 flex flex-wrap items-center justify-between gap-3">
+        <div><div id="lbTitle" class="font-semibold"></div><div id="lbMeta" class="text-sm text-slate-500"></div></div>
+        <div id="lbActions" class="flex flex-wrap gap-2"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const BADGE = {
+      confirmed: ['bg-green-100 text-green-700', 'Confirmed'],
+      pending:   ['bg-yellow-100 text-yellow-700', 'Pending'],
+      rejected:  ['bg-red-100 text-red-700', 'Rejected']
+    };
+    let sess = null, currentFilter = 'all', openId = null;
+    const selected = new Set();
+
+    const dets = () => sess ? RG.myDetections(sess.id) : [];
+    const complaintOf = d => RG.complaintForDetection(d.id);
+    const selectable = d => d.status === 'confirmed' && !complaintOf(d);
+
+    function cardHtml(d) {
+      const [cls, label] = BADGE[d.status], c = complaintOf(d);
+      let actions;
+      if (d.status === 'pending') {
+        actions = `<button onclick="setStatus(${d.id},'confirmed')" class="flex-1 text-sm py-1.5 bg-success-500 hover:bg-green-600 text-white rounded-lg font-medium">Confirm</button>
+                   <button onclick="setStatus(${d.id},'rejected')" class="flex-1 text-sm py-1.5 border border-red-200 text-red-600 hover:bg-red-50 rounded-lg">Reject</button>`;
+      } else if (d.status === 'confirmed') {
+        actions = `<a href="pothole-details.html?id=${d.id}" class="flex-1 text-center text-sm py-1.5 border border-slate-200 rounded-lg hover:bg-slate-50">Details</a>` +
+          (c ? `<a href="complaint.html" class="flex-1 text-center text-sm py-1.5 bg-green-50 text-green-700 rounded-lg font-medium">Complaint ${c.id}</a>`
+             : `<button onclick="setStatus(${d.id},'rejected')" class="flex-1 text-sm py-1.5 border border-red-200 text-red-600 hover:bg-red-50 rounded-lg">Reject</button>`);
+      } else {
+        actions = `<button onclick="setStatus(${d.id},'pending')" class="w-full text-sm py-1.5 border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50">Rejected — Undo</button>`;
+      }
+      const corner = selectable(d)
+        ? `<label onclick="event.stopPropagation()" class="absolute top-2 left-2 z-10 flex items-center gap-1.5 bg-white/95 text-slate-800 text-xs font-medium px-2 py-1 rounded cursor-pointer shadow">
+             <input type="checkbox" ${selected.has(d.id) ? 'checked' : ''} onchange="toggleSel(${d.id}, this.checked)" class="w-4 h-4"> Select</label>`
+        : (c ? `<div class="absolute top-2 left-2 z-10 bg-green-600 text-white text-xs font-medium px-2 py-1 rounded shadow">Complaint ${c.id}</div>` : '');
+      return `<div class="detection-card border ${selected.has(d.id) ? 'border-primary-500 ring-2 ring-primary-200' : 'border-slate-200'} rounded-xl overflow-hidden">
+        <div onclick="openFrame(${d.id})" title="Click to enlarge" class="aspect-video bg-slate-200 relative overflow-hidden cursor-zoom-in ${d.status === 'rejected' ? 'opacity-60' : ''}">
+          ${RG.frameHtml(d)}
+          ${corner}
+          <div class="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-0.5 rounded">${d.conf}%</div>
+          <div class="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-0.5 rounded">${RG.esc(RG.frameLabel(d))}</div>
+          <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-0.5 rounded">🔍 Enlarge</div>
+        </div>
+        <div class="p-4">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-sm font-medium">Detection #${d.n}</span>
+            <span class="text-xs px-2 py-0.5 rounded-full ${cls}">${label}</span>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">${RG.coord(d.lat, d.lng)} • ${RG.esc(RG.frameTime(d))}</p>
+          <div class="flex gap-2">${actions}</div>
+        </div>
+      </div>`;
+    }
+
+    function render() {
+      if (!sess) return;
+      // forget selections that are no longer allowed
+      const ok = new Set(dets().filter(selectable).map(d => d.id));
+      [...selected].forEach(id => { if (!ok.has(id)) selected.delete(id); });
+
+      const all = dets();
+      const list = currentFilter === 'all' ? all : all.filter(d => d.status === currentFilter);
+      document.getElementById('detectionsGrid').innerHTML = list.length ? list.map(cardHtml).join('')
+        : '<p class="text-sm text-slate-500 col-span-full text-center py-8">No detections in this view.</p>';
+      const n = s => all.filter(d => d.status === s).length;
+      document.getElementById('sTotal').textContent = all.length;
+      document.getElementById('sConf').textContent = n('confirmed');
+      document.getElementById('sPend').textContent = n('pending');
+      document.getElementById('sRej').textContent = n('rejected');
+      document.getElementById('sessMeta').textContent = 'Uploaded ' + RG.fmtDate(sess.date) + ' • ' + (sess.mediaType === 'photo' ? 'JPEG photo' : 'Video') + ' • ' + all.length + ' potholes detected';
+      const btn = document.getElementById('complaintBtn'), k = selected.size;
+      btn.textContent = k ? 'Create Complaint (' + k + ' selected)' : 'Create Complaint';
+      btn.classList.toggle('opacity-50', !k);
+      btn.title = k ? '' : 'Select one or more confirmed frames first';
+    }
+
+    function filterDetections(status) {
+      currentFilter = status;
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        const active = btn.dataset.filter === status;
+        btn.classList.toggle('bg-primary-100', active); btn.classList.toggle('text-primary-700', active);
+        btn.classList.toggle('font-medium', active); btn.classList.toggle('text-slate-600', !active);
+      });
+      render();
+    }
+
+    function toggleSel(id, on) { on ? selected.add(id) : selected.delete(id); render(); if (openId === id) paintFrame(); }
+    function selectAllConfirmed() {
+      const ds = dets().filter(selectable);
+      if (!ds.length) { RG.toast('No confirmed frames to select yet.', false); return; }
+      ds.forEach(d => selected.add(d.id)); render();
+    }
+    async function setStatus(id, status) { await RG.setDetectionStatus(id, status); render(); if (openId === id) paintFrame(); }
+
+    function startComplaint() {
+      if (!selected.size) { RG.toast('Select one or more confirmed frames first (tick "Select" on a card).', false); return; }
+      RG.openComplaintModal({ preselect: [...selected], onSaved: () => { selected.clear(); closeFrame(); render(); } });
+    }
+
+    async function confirmAll() {
+      const pending = dets().filter(d => d.status === 'pending');
+      if (!pending.length) { RG.toast('No pending detections to confirm.'); return; }
+      const done = (await Promise.all(pending.map(d => RG.setDetectionStatus(d.id, 'confirmed')))).filter(Boolean).length;
+      render();
+      if (done) RG.toast(done + ' detection(s) confirmed. Now select frames and create a complaint.');
+    }
+
+    /* Lightbox */
+    function openFrame(id) { openId = id; paintFrame(); document.getElementById('lightbox').classList.remove('hidden'); }
+    function closeFrame() { openId = null; document.getElementById('lightbox').classList.add('hidden'); }
+    function paintFrame() {
+      const d = RG.detection(openId); if (!d) return;
+      document.getElementById('lbFrame').innerHTML = RG.frameHtml(d, true);
+      document.getElementById('lbTitle').textContent = 'Detection #' + d.n + ' — ' + d.conf + '% confidence (' + BADGE[d.status][1] + ')';
+      document.getElementById('lbMeta').textContent = RG.frameLabel(d) + ' • ' + RG.frameTime(d) + ' • ' + RG.coord(d.lat, d.lng);
+      const btn = (cls, label, js) => `<button onclick="${js}" class="px-4 py-2 text-sm rounded-lg font-medium ${cls}">${label}</button>`;
+      document.getElementById('lbActions').innerHTML =
+        (d.status !== 'confirmed' ? btn('bg-success-500 hover:bg-green-600 text-white', 'Confirm pothole', `setStatus(${d.id},'confirmed')`) : '') +
+        (d.status === 'confirmed' && selectable(d) ? btn(selected.has(d.id) ? 'bg-primary-600 text-white' : 'border border-primary-600 text-primary-700 hover:bg-primary-50', selected.has(d.id) ? '✓ Selected for complaint' : 'Select for complaint', `toggleSel(${d.id}, ${!selected.has(d.id)})`) : '') +
+        (d.status !== 'rejected' && !complaintOf(d) ? btn('border border-red-200 text-red-600 hover:bg-red-50', 'Reject', `setStatus(${d.id},'rejected')`) : '') +
+        btn('border border-slate-300 hover:bg-slate-50', 'Close', 'closeFrame()');
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeFrame(); });
+
+    /* Session picking */
+    function switchSession(id) { sess = RG.session(id); selected.clear(); currentFilter = 'all'; init(false); }
+    function init(pick) {
+      const sessions = RG.mySessions();
+      if (!sessions.length) { document.getElementById('emptyState').classList.remove('hidden'); return; }
+      if (pick) sess = sessions.find(s => s.id === new URLSearchParams(location.search).get('session')) || sessions[0];
+      document.getElementById('content').classList.remove('hidden');
+      document.getElementById('sessName').textContent = sess.name;
+      const sw = document.getElementById('sessSwitch');
+      sw.classList.toggle('hidden', sessions.length < 2);
+      sw.innerHTML = sessions.map(s => `<option value="${s.id}" ${s.id === sess.id ? 'selected' : ''}>${RG.esc(s.name)} (${RG.fmtDate(s.date)})</option>`).join('');
+      filterDetections('all');
+    }
+    RG.ready.then(() => init(true));
+  </script>
+</body>
+</html>

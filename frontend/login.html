@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login - RoadGuard AI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' },
+            accent: { 500: '#f59e0b', 600: '#d97706' }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 min-h-screen flex flex-col">
+  <!-- Navbar -->
+  <nav class="bg-white shadow-sm border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between h-16 items-center">
+        <a href="index.html" class="flex items-center gap-2">
+          <div class="w-9 h-9 bg-primary-600 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+          </div>
+          <span class="font-bold text-xl text-primary-800">RoadGuard <span class="text-accent-500">AI</span></span>
+        </a>
+        <a href="register.html" class="text-primary-600 hover:text-primary-700 font-medium">Create account</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="flex-1 flex items-center justify-center px-4 py-12">
+    <div class="w-full max-w-md">
+      <div class="bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
+        <div class="text-center mb-8">
+          <h1 class="text-2xl font-bold text-slate-900">Welcome back</h1>
+          <p class="text-slate-600 mt-1">Sign in to your RoadGuard AI account</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-1 bg-slate-100 rounded-xl p-1 mb-6" role="tablist">
+          <button type="button" id="tab-user" onclick="setRole('user')" class="py-2 rounded-lg text-sm font-semibold transition">User</button>
+          <button type="button" id="tab-admin" onclick="setRole('admin')" class="py-2 rounded-lg text-sm font-semibold transition">Administrator</button>
+        </div>
+        <div id="loginError" class="hidden mb-4 text-sm bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-2.5"></div>
+
+        <form id="loginForm" class="space-y-5" onsubmit="handleLogin(event)">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Email address</label>
+            <input type="email" id="email" required placeholder="you@example.com"
+              class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+            <input type="password" id="password" required placeholder="••••••••"
+              class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition" />
+          </div>
+          <div class="flex items-center justify-between">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" class="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
+              <span class="text-sm text-slate-600">Remember me</span>
+            </label>
+            <button type="button" class="text-sm text-primary-600 hover:text-primary-700 font-medium">Forgot password?</button>
+          </div>
+          <button type="submit" class="w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2.5 rounded-lg transition">
+            Sign In
+          </button>
+        </form>
+
+        <div class="mt-6 pt-6 border-t border-slate-200">
+          <p class="text-center text-sm text-slate-600">
+            Don't have an account?
+            <a id="regLink" href="register.html" class="text-primary-600 hover:text-primary-700 font-medium">Register</a>
+          </p>
+        </div>
+
+        <!-- Demo account (changes with selected role) -->
+        <div class="mt-6 bg-slate-50 rounded-xl p-4">
+          <p class="text-xs font-medium text-slate-500 mb-2">Demo account (click to fill)</p>
+          <button type="button" id="demoBtn" onclick="fillDemo()" class="w-full text-left text-sm px-3 py-2 bg-white border border-slate-200 rounded-lg hover:border-primary-300 transition"></button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    let role = 'user';
+    const DEMOS = { user: ['user@demo.com', 'demo123', 'User'], admin: ['admin@demo.com', 'admin123', 'Administrator'] };
+    function setRole(r) {
+      role = r;
+      const on = 'bg-white text-primary-700 shadow-sm', off = 'text-slate-500 hover:text-slate-700';
+      ['user', 'admin'].forEach(x => document.getElementById('tab-' + x).className = 'py-2 rounded-lg text-sm font-semibold transition ' + (x === r ? on : off));
+      document.getElementById('loginError').classList.add('hidden');
+      document.querySelector('h1').textContent = r === 'admin' ? 'Administrator sign in' : 'Welcome back';
+      document.getElementById('demoBtn').innerHTML = '<span class="font-medium text-slate-800">' + DEMOS[r][2] + '</span> — ' + DEMOS[r][0];
+      document.getElementById('regLink').parentElement.parentElement.style.display = r === 'admin' ? 'none' : '';
+    }
+    function fillDemo() {
+      document.getElementById('email').value = DEMOS[role][0];
+      document.getElementById('password').value = DEMOS[role][1];
+    }
+    async function handleLogin(e) {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type=submit]');
+      if (btn) btn.disabled = true;
+      const res = await RG.login(document.getElementById('email').value, document.getElementById('password').value, role);
+      if (btn) btn.disabled = false;
+      if (!res.ok) {
+        const box = document.getElementById('loginError');
+        box.textContent = res.error; box.classList.remove('hidden'); return;
+      }
+      location.href = RG.home(res.user.role);
+    }
+    const existing = RG.currentUser();
+    if (existing) location.replace(RG.home(existing.role));
+    setRole(new URLSearchParams(location.search).get('role') === 'admin' ? 'admin' : 'user');
+  </script>
+</body>
+</html>
